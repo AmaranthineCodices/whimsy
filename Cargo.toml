@@ -1,9 +1,14 @@
 [package]
 name = "whimsy"
+description = "A window manager for Windows"
 version = "0.1.0"
-authors = ["AmaranthineCodices <git@amaranthinecodices.me>"]
+authors = ["Lily Brown <lily@lily.fyi>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+winapi = { version = "0.3", features = ["winuser"] }
+
+log = "0.4"
+pretty_env_logger = "0.4.0"
