@@ -23,14 +23,14 @@ impl Window {
 
     pub fn get_rect(&self) -> Result<Rect, ()> {
         unsafe {
-            let winapi_rect: winapi::shared::windef::LPRECT = std::ptr::null_mut();
-            evaluate_fallible_winapi!(GetWindowRect(self.handle, winapi_rect));
+            let mut winapi_rect: winapi::shared::windef::RECT = std::mem::zeroed();
+            evaluate_fallible_winapi!(GetWindowRect(self.handle, &mut winapi_rect));
 
             Ok(Rect {
-                left: (*winapi_rect).left,
-                top: (*winapi_rect).top,
-                right: (*winapi_rect).right,
-                bottom: (*winapi_rect).bottom,
+                left: winapi_rect.left,
+                top: winapi_rect.top,
+                right: winapi_rect.right,
+                bottom: winapi_rect.bottom,
             })
         }
     }
