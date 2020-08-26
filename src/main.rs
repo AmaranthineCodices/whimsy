@@ -14,9 +14,10 @@ fn main() {
             keybind::Modifier::Shift,
             keybind::Modifier::Alt,
             keybind::Modifier::Control,
+            keybind::Modifier::Super,
         ],
         std::rc::Rc::new(|| {
-            println!("Ctrl+Shift+Alt+F1 pressed!");
+            println!("Ctrl+Shift+Alt+Super+F1 pressed!");
         }),
     )
     .unwrap();
