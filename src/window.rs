@@ -1,15 +1,21 @@
 /// Rustified abstraction layer over winapi for interacting with (top-level) windows.
 use winapi::um::winuser;
 
-pub type WindowHandle = winapi::shared::windef::HWND;
+type WindowHandle = winapi::shared::windef::HWND;
+type MonitorHandle = winapi::shared::windef::HMONITOR;
 type Win32Rect = winapi::shared::windef::RECT;
+
+/// This type will be returned from methods that invoke fallible Win32 errors.
+/// The error, if any, is logged to the output if logging is enabled, but it is
+/// not exposed because it is not particularly useful to callers.
+pub type Win32Result<T> = Result<T, ()>;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Rect {
-    left: i32,
-    top: i32,
-    right: i32,
-    bottom: i32,
+    pub left: i32,
+    pub top: i32,
+    pub right: i32,
+    pub bottom: i32,
 }
 
 impl Rect {
@@ -47,6 +53,10 @@ impl Rect {
             (self.bottom - self.top).abs(),
         )
     }
+
+    fn from_win32_rect(rect: Win32Rect) -> Rect {
+        Rect::xyxy(rect.left, rect.top, rect.right, rect.bottom)
+    }
 }
 
 #[derive(Debug)]
@@ -55,11 +65,11 @@ pub struct Window {
 }
 
 impl Window {
-    pub fn from_window_handle(handle: WindowHandle) -> Window {
+    fn from_window_handle(handle: WindowHandle) -> Window {
         Window { handle }
     }
 
-    pub fn get_rect(&self) -> Result<Rect, ()> {
+    pub fn get_rect(&self) -> Win32Result<Rect> {
         unsafe {
             let mut winapi_rect: Win32Rect = std::mem::zeroed();
             evaluate_fallible_winapi!(winuser::GetWindowRect(self.handle, &mut winapi_rect));
@@ -73,7 +83,7 @@ impl Window {
         }
     }
 
-    pub fn set_rect(&mut self, rect: Rect) -> Result<(), ()> {
+    pub fn set_rect(&mut self, rect: Rect) -> Win32Result<()> {
         // Size and position will change, Z order will not. We don't want to activate the window,
         // and this call should be non-blocking.
         let flags = winuser::SWP_NOZORDER | winuser::SWP_NOACTIVATE | winuser::SWP_ASYNCWINDOWPOS;
@@ -93,6 +103,14 @@ impl Window {
 
         Ok(())
     }
+
+    pub fn get_monitor(&self) -> Monitor {
+        unsafe {
+            Monitor {
+                handle: winuser::MonitorFromWindow(self.handle, winuser::MONITOR_DEFAULTTONEAREST),
+            }
+        }
+    }
 }
 
 pub fn get_focused_window() -> Option<Window> {
@@ -103,6 +121,24 @@ pub fn get_focused_window() -> Option<Window> {
             Some(Window::from_window_handle(handle))
         } else {
             None
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Monitor {
+    handle: MonitorHandle,
+}
+
+impl Monitor {
+    pub fn get_work_area(&self) -> Win32Result<Rect> {
+        unsafe {
+            let mut monitor_info: winuser::MONITORINFO = std::mem::zeroed();
+            // u32 cast is safe, usize will be 32 bits or larger on all platforms we care about.
+            monitor_info.cbSize = std::mem::size_of::<winuser::MONITORINFO>() as u32;
+
+            evaluate_fallible_winapi!(winuser::GetMonitorInfoW(self.handle, &mut monitor_info));
+            Ok(Rect::from_win32_rect(monitor_info.rcWork))
         }
     }
 }
