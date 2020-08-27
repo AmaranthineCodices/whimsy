@@ -9,15 +9,18 @@ fn main() {
 
     let mut kb = keybind::Keybinds::new();
     kb.register_keybind(
-        winapi::um::winuser::VK_F1 as u32,
+        winapi::um::winuser::VK_RIGHT as u32,
         vec![
-            keybind::Modifier::Shift,
             keybind::Modifier::Alt,
             keybind::Modifier::Control,
             keybind::Modifier::Super,
         ],
         std::rc::Rc::new(|| {
-            println!("Ctrl+Shift+Alt+Super+F1 pressed!");
+            if let Some(mut active_window) = window::get_focused_window() {
+                active_window
+                    .set_rect(window::Rect::xywh(0, 0, 800, 400))
+                    .unwrap();
+            }
         }),
     )
     .unwrap();

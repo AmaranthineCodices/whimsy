@@ -13,7 +13,7 @@ pub struct Rect {
 }
 
 impl Rect {
-    fn xyxy(left: i32, top: i32, right: i32, bottom: i32) -> Rect {
+    pub fn xyxy(left: i32, top: i32, right: i32, bottom: i32) -> Rect {
         let (x0, x1) = if left < right {
             (left, right)
         } else {
@@ -34,14 +34,14 @@ impl Rect {
         }
     }
 
-    fn xywh(left: i32, top: i32, width: i32, height: i32) -> Rect {
+    pub fn xywh(left: i32, top: i32, width: i32, height: i32) -> Rect {
         let right = left + width;
         let bottom = top + height;
 
         Rect::xyxy(left, top, right, bottom)
     }
 
-    fn wh(&self) -> (i32, i32) {
+    pub fn wh(&self) -> (i32, i32) {
         (
             (self.right - self.left).abs(),
             (self.bottom - self.top).abs(),
@@ -92,5 +92,17 @@ impl Window {
         }
 
         Ok(())
+    }
+}
+
+pub fn get_focused_window() -> Option<Window> {
+    unsafe {
+        let handle = winuser::GetForegroundWindow();
+
+        if !handle.is_null() {
+            Some(Window::from_window_handle(handle))
+        } else {
+            None
+        }
     }
 }
