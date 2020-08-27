@@ -84,7 +84,9 @@ impl Keybinds {
                 );
 
                 match result {
+                    // Result code 0 is a WM_QUIT message; we should stop the loop here.
                     0 => break,
+                    // -1 is an error.
                     -1 => {
                         log::error!(
                             "Error from GetMessageW: {}",
@@ -92,6 +94,8 @@ impl Keybinds {
                         );
                         return Err(());
                     }
+                    // Anything else is a successful message retrieval; if this is the case, `msg`
+                    // is safe to read.
                     _ => {
                         debug_assert!(msg.message == winuser::WM_HOTKEY, "The keybind message loop only handles WM_HOTKEY messages, but it has received a message that is not a hotkey message.");
                         let id = msg.wParam as i32;
