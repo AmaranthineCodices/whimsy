@@ -47,8 +47,8 @@ fn main() {
     pretty_env_logger::init();
     let cli_options = cli::CliOptions::from_args();
 
-    match cli_options {
-        cli::CliOptions::OpenConfigFile => {
+    match cli_options.command {
+        Some(cli::CliCommand::OpenConfigFile) => {
             let config_path = config::default_config_path();
 
             if !config_path.exists() {
@@ -101,8 +101,10 @@ fn main() {
                     std::process::exit(1);
                 }
             }
+
+            return;
         }
-        _ => println!("unknown option"),
+        None => {}
     }
 
     let mut kb = keybind::Keybinds::new();
