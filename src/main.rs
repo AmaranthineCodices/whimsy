@@ -81,7 +81,7 @@ fn main() {
                     path_bytes[..].as_ptr(),
                     std::ptr::null(),
                     std::ptr::null(),
-                    winapi::um::winuser::SW_SHOWNORMAL,
+                    winuser::SW_SHOWNORMAL,
                     // Ugly: ShellExecute returns a fake HINSTANCE for backwards compatibility.
                     // It is actually a result code. We need to convert it to an i32 in order
                     // to actually check it.
@@ -127,10 +127,10 @@ fn main() {
         .unwrap();
     };
 
-    make_push_kb(winapi::um::winuser::VK_UP, PushDirection::Up);
-    make_push_kb(winapi::um::winuser::VK_LEFT, PushDirection::Left);
-    make_push_kb(winapi::um::winuser::VK_RIGHT, PushDirection::Right);
-    make_push_kb(winapi::um::winuser::VK_DOWN, PushDirection::Down);
+    make_push_kb(winuser::VK_UP, PushDirection::Up);
+    make_push_kb(winuser::VK_LEFT, PushDirection::Left);
+    make_push_kb(winuser::VK_RIGHT, PushDirection::Right);
+    make_push_kb(winuser::VK_DOWN, PushDirection::Down);
 
     kb.start_message_loop().unwrap();
 }
