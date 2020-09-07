@@ -6,6 +6,8 @@ mod config;
 mod keybind;
 mod window;
 
+use std::collections::HashMap;
+
 use color_eyre::eyre::Result;
 
 use structopt::StructOpt;
@@ -109,77 +111,101 @@ fn main() -> Result<()> {
 
     let config = config::read_config_from_file(&config::default_config_path())?.unwrap_or_default();
     let mut kb = keybind::Keybinds::new();
+    let mut kb_bindings = HashMap::new();
 
-    for binding in config.bindings {
-        kb.register_keybind(
-            binding.key as u32,
-            binding.modifiers,
-            std::rc::Rc::new(move || match binding.action {
-                config::Action::Push {
-                    direction,
-                    fraction,
-                } => {
-                    if let Some(mut active_window) = window::get_focused_window() {
-                        let monitor = active_window.get_monitor();
-                        let monitor_work_area = monitor.get_work_area().unwrap();
-                        let pushed_rect = slice_rect(direction, monitor_work_area, fraction);
-                        active_window.set_rect(pushed_rect).unwrap();
-                    }
-                }
-                config::Action::Nudge {
-                    direction,
-                    distance,
-                } => {
-                    if let Some(mut active_window) = window::get_focused_window() {
-                        let starting_rect = active_window.get_rect().unwrap();
-                        let (width, height) = starting_rect.wh();
-                        let absolute_distance = match distance {
-                            config::Metric::Absolute(value) => value,
-                            config::Metric::Percent(fraction) => match direction {
-                                config::Direction::Up | config::Direction::Down => {
-                                    height as f32 * fraction
-                                }
-                                config::Direction::Left | config::Direction::Right => {
-                                    width as f32 * fraction
-                                }
-                            },
-                        } as i32;
-
-                        let nudged_rect = match direction {
-                            config::Direction::Up => window::Rect::xywh(
-                                starting_rect.left,
-                                starting_rect.top + absolute_distance,
-                                width,
-                                height,
-                            ),
-                            config::Direction::Down => window::Rect::xywh(
-                                starting_rect.left,
-                                starting_rect.top - absolute_distance,
-                                width,
-                                height,
-                            ),
-                            config::Direction::Left => window::Rect::xywh(
-                                starting_rect.left - absolute_distance,
-                                starting_rect.top,
-                                width,
-                                height,
-                            ),
-                            config::Direction::Right => window::Rect::xywh(
-                                starting_rect.left + absolute_distance,
-                                starting_rect.top,
-                                width,
-                                height,
-                            ),
-                        };
-
-                        active_window.set_rect(nudged_rect).unwrap();
-                    }
-                }
-            }),
-        );
+    for binding in &config.bindings {
+        let binding_id = kb
+            .register_keybind(binding.key, &binding.modifiers)
+            .unwrap();
+        kb_bindings.insert(binding_id, binding);
     }
 
-    kb.start_message_loop().unwrap();
+    loop {
+        match kb.poll_message_loop().unwrap() {
+            keybind::KeybindMessage::Quit => {
+                log::debug!("Stopping keybind message polling due to a quit message");
+                break;
+            }
+            keybind::KeybindMessage::BindActivated(id) => {
+                let &binding = kb_bindings.get(&id).unwrap();
+
+                match binding.action {
+                    config::Action::Push {
+                        direction,
+                        fraction,
+                    } => {
+                        if let Some(mut active_window) = window::get_focused_window() {
+                            let monitor = active_window.get_monitor();
+                            let monitor_work_area = monitor.get_work_area().unwrap();
+                            let pushed_rect = slice_rect(direction, monitor_work_area, fraction);
+                            log::debug!(
+                                "Pushed active window (direction {:?}, fraction {:?}) to rect {:?}",
+                                direction,
+                                fraction,
+                                pushed_rect
+                            );
+                            active_window.set_rect(pushed_rect).unwrap();
+                        }
+                    }
+                    config::Action::Nudge {
+                        direction,
+                        distance,
+                    } => {
+                        if let Some(mut active_window) = window::get_focused_window() {
+                            let starting_rect = active_window.get_rect().unwrap();
+                            let (width, height) = starting_rect.wh();
+                            let absolute_distance = match distance {
+                                config::Metric::Absolute(value) => value,
+                                config::Metric::Percent(fraction) => match direction {
+                                    config::Direction::Up | config::Direction::Down => {
+                                        height as f32 * fraction
+                                    }
+                                    config::Direction::Left | config::Direction::Right => {
+                                        width as f32 * fraction
+                                    }
+                                },
+                            } as i32;
+
+                            let nudged_rect = match direction {
+                                config::Direction::Up => window::Rect::xywh(
+                                    starting_rect.left,
+                                    starting_rect.top - absolute_distance,
+                                    width,
+                                    height,
+                                ),
+                                config::Direction::Down => window::Rect::xywh(
+                                    starting_rect.left,
+                                    starting_rect.top + absolute_distance,
+                                    width,
+                                    height,
+                                ),
+                                config::Direction::Left => window::Rect::xywh(
+                                    starting_rect.left - absolute_distance,
+                                    starting_rect.top,
+                                    width,
+                                    height,
+                                ),
+                                config::Direction::Right => window::Rect::xywh(
+                                    starting_rect.left + absolute_distance,
+                                    starting_rect.top,
+                                    width,
+                                    height,
+                                ),
+                            };
+
+                            active_window.set_rect(nudged_rect).unwrap();
+                            log::debug!(
+                                "Nudged active window {:?}px in direction {:?} - new rect {:?}",
+                                absolute_distance,
+                                direction,
+                                nudged_rect
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     Ok(())
 }
