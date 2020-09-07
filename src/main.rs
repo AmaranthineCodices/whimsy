@@ -6,35 +6,29 @@ mod config;
 mod keybind;
 mod window;
 
+use color_eyre::eyre::Result;
+
 use structopt::StructOpt;
 
 use winapi::shared::winerror;
 use winapi::um::shellapi;
 use winapi::um::winuser;
 
-#[derive(Debug, Copy, Clone)]
-enum PushDirection {
-    Up,
-    Left,
-    Right,
-    Down,
-}
-
-fn slice_rect(direction: PushDirection, rect: window::Rect, slice_factor: f32) -> window::Rect {
+fn slice_rect(direction: config::Direction, rect: window::Rect, slice_factor: f32) -> window::Rect {
     let (width, height) = rect.wh();
     let width_slice = ((width as f32) / slice_factor) as i32;
     let height_slice = ((height as f32) / slice_factor) as i32;
 
     match direction {
-        PushDirection::Up => window::Rect::xywh(rect.left, rect.top, width, height_slice),
-        PushDirection::Left => window::Rect::xywh(rect.left, rect.top, width_slice, height),
-        PushDirection::Right => window::Rect::xywh(
+        config::Direction::Up => window::Rect::xywh(rect.left, rect.top, width, height_slice),
+        config::Direction::Left => window::Rect::xywh(rect.left, rect.top, width_slice, height),
+        config::Direction::Right => window::Rect::xywh(
             rect.left + width - width_slice,
             rect.top,
             width_slice,
             height,
         ),
-        PushDirection::Down => window::Rect::xywh(
+        config::Direction::Down => window::Rect::xywh(
             rect.left,
             rect.top + height - height_slice,
             width,
@@ -43,10 +37,11 @@ fn slice_rect(direction: PushDirection, rect: window::Rect, slice_factor: f32) -
     }
 }
 
-fn main() {
+fn main() -> Result<()> {
     pretty_env_logger::init();
-    let cli_options = cli::CliOptions::from_args();
+    color_eyre::install()?;
 
+    let cli_options = cli::CliOptions::from_args();
     match cli_options.command {
         Some(cli::CliCommand::OpenConfigFile) => {
             let config_path = config::default_config_path();
@@ -102,37 +97,89 @@ fn main() {
                 }
             }
 
-            return;
+            return Ok(());
+        }
+        Some(cli::CliCommand::RegenerateConfigFile) => {
+            config::create_default_config()?;
+
+            return Ok(());
         }
         None => {}
     }
 
+    let config = config::read_config_from_file(&config::default_config_path())?.unwrap_or_default();
     let mut kb = keybind::Keybinds::new();
 
-    let mut make_push_kb = |key: i32, direction: PushDirection| {
+    for binding in config.bindings {
         kb.register_keybind(
-            key as u32,
-            vec![
-                keybind::Modifier::Alt,
-                keybind::Modifier::Control,
-                keybind::Modifier::Super,
-            ],
-            std::rc::Rc::new(move || {
-                if let Some(mut active_window) = window::get_focused_window() {
-                    let monitor = active_window.get_monitor();
-                    let monitor_work_area = monitor.get_work_area().unwrap();
-                    let pushed_rect = slice_rect(direction, monitor_work_area, 2.0);
-                    active_window.set_rect(pushed_rect).unwrap();
+            binding.key as u32,
+            binding.modifiers,
+            std::rc::Rc::new(move || match binding.action {
+                config::Action::Push {
+                    direction,
+                    fraction,
+                } => {
+                    if let Some(mut active_window) = window::get_focused_window() {
+                        let monitor = active_window.get_monitor();
+                        let monitor_work_area = monitor.get_work_area().unwrap();
+                        let pushed_rect = slice_rect(direction, monitor_work_area, fraction);
+                        active_window.set_rect(pushed_rect).unwrap();
+                    }
+                }
+                config::Action::Nudge {
+                    direction,
+                    distance,
+                } => {
+                    if let Some(mut active_window) = window::get_focused_window() {
+                        let starting_rect = active_window.get_rect().unwrap();
+                        let (width, height) = starting_rect.wh();
+                        let absolute_distance = match distance {
+                            config::Metric::Absolute(value) => value,
+                            config::Metric::Percent(fraction) => match direction {
+                                config::Direction::Up | config::Direction::Down => {
+                                    height as f32 * fraction
+                                }
+                                config::Direction::Left | config::Direction::Right => {
+                                    width as f32 * fraction
+                                }
+                            },
+                        } as i32;
+
+                        let nudged_rect = match direction {
+                            config::Direction::Up => window::Rect::xywh(
+                                starting_rect.left,
+                                starting_rect.top + absolute_distance,
+                                width,
+                                height,
+                            ),
+                            config::Direction::Down => window::Rect::xywh(
+                                starting_rect.left,
+                                starting_rect.top - absolute_distance,
+                                width,
+                                height,
+                            ),
+                            config::Direction::Left => window::Rect::xywh(
+                                starting_rect.left - absolute_distance,
+                                starting_rect.top,
+                                width,
+                                height,
+                            ),
+                            config::Direction::Right => window::Rect::xywh(
+                                starting_rect.left + absolute_distance,
+                                starting_rect.top,
+                                width,
+                                height,
+                            ),
+                        };
+
+                        active_window.set_rect(nudged_rect).unwrap();
+                    }
                 }
             }),
-        )
-        .unwrap();
-    };
-
-    make_push_kb(winuser::VK_UP, PushDirection::Up);
-    make_push_kb(winuser::VK_LEFT, PushDirection::Left);
-    make_push_kb(winuser::VK_RIGHT, PushDirection::Right);
-    make_push_kb(winuser::VK_DOWN, PushDirection::Down);
+        );
+    }
 
     kb.start_message_loop().unwrap();
+
+    Ok(())
 }
