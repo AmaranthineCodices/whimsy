@@ -8,7 +8,7 @@ pub enum ConfigReadError {
     #[error("could not read config file: {0}")]
     IoError(std::io::Error),
     #[error("could not deserialize config file contents: {0}")]
-    DeserializeError(ron::error::Error),
+    DeserializeError(serde_yaml::Error),
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -79,12 +79,16 @@ impl Default for Config {
                     modifiers: vec![keybind::Modifier::Super, keybind::Modifier::Shift],
                     action: Action::Push {
                         direction: Direction::Left,
-                        fraction: 0.5,
+                        fraction: 2.0,
                     },
                 },
                 Binding {
                     key: keybind::Key::Left,
-                    modifiers: vec![keybind::Modifier::Super, keybind::Modifier::Shift],
+                    modifiers: vec![
+                        keybind::Modifier::Super,
+                        keybind::Modifier::Shift,
+                        keybind::Modifier::Alt,
+                    ],
                     action: Action::Nudge {
                         direction: Direction::Left,
                         distance: Metric::Absolute(100.0),
@@ -101,13 +105,13 @@ pub fn read_config_from_file(path: &dyn AsRef<Path>) -> Result<Option<Config>, C
     }
 
     let config_string = std::fs::read_to_string(path).map_err(|e| ConfigReadError::IoError(e))?;
-    ron::from_str(&config_string).map_err(|e| ConfigReadError::DeserializeError(e))
+    serde_yaml::from_str(&config_string).map_err(|e| ConfigReadError::DeserializeError(e))
 }
 
 pub fn default_config_path() -> PathBuf {
     let mut cfg_dir = dirs::config_dir().expect("Could not find user configuration directory.");
     cfg_dir.push("whimsy");
-    cfg_dir.push("whimsy.ron");
+    cfg_dir.push("whimsy.yaml");
     cfg_dir
 }
 
@@ -115,8 +119,7 @@ pub fn create_default_config() -> std::io::Result<()> {
     let default_config = Config::default();
     let default_path = default_config_path();
     // This should always succeed; the default config should always be representable.
-    let config_string =
-        ron::ser::to_string_pretty(&default_config, ron::ser::PrettyConfig::default()).unwrap();
+    let config_string = serde_yaml::to_string(&default_config).unwrap();
     std::fs::create_dir_all(&default_path.parent().unwrap())?;
     std::fs::write(&default_path, &config_string)?;
     Ok(())
