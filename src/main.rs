@@ -109,7 +109,11 @@ fn main() -> Result<()> {
         None => {}
     }
 
-    let config = config::read_config_from_file(&config::default_config_path())?.unwrap_or_default();
+    let config_path = cli_options
+        .config_file
+        .unwrap_or_else(config::default_config_path);
+
+    let config = config::read_config_from_file(&config_path)?.unwrap_or_default();
     let mut kb = keybind::Keybinds::new();
     let mut kb_bindings = HashMap::new();
 

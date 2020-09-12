@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
@@ -19,4 +21,6 @@ pub enum CliCommand {
 pub struct CliOptions {
     #[structopt(subcommand)]
     pub command: Option<CliCommand>,
+    #[structopt(short, long, env = "WHIMSY_CFG")]
+    pub config_file: Option<PathBuf>,
 }
