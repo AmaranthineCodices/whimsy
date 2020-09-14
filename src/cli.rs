@@ -6,7 +6,7 @@ use structopt::StructOpt;
 pub enum CliCommand {
     #[structopt(
         name = "open-cfg",
-        about = "Opens the whimsy configuration file in the default text editor for TOML files."
+        about = "Opens the whimsy configuration file in the default text editor for YAML files."
     )]
     OpenConfigFile,
     #[structopt(
