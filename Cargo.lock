@@ -657,6 +657,7 @@ dependencies = [
  "clap",
  "color-eyre",
  "dirs",
+ "lazy_static",
  "log",
  "pretty_env_logger",
  "serde",

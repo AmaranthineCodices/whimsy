@@ -23,3 +23,5 @@ structopt = "0.3"
 
 color-eyre = "0.5"
 thiserror = "1.0"
+
+lazy_static = "1.4.0"

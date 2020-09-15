@@ -21,6 +21,12 @@ pub enum CliCommand {
 pub struct CliOptions {
     #[structopt(subcommand)]
     pub command: Option<CliCommand>,
-    #[structopt(short, long, env = "WHIMSY_CFG")]
-    pub config_file: Option<PathBuf>,
+    #[structopt(
+        short,
+        long,
+        env = "WHIMSY_CFG",
+        default_value(crate::config::DEFAULT_CONFIG_PATH.to_str().unwrap())
+    )]
+    /// The path to the whimsy configuration file to use.
+    pub config_file: PathBuf,
 }

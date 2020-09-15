@@ -46,7 +46,7 @@ fn main() -> Result<()> {
     let cli_options = cli::CliOptions::from_args();
     match cli_options.command {
         Some(cli::CliCommand::OpenConfigFile) => {
-            let config_path = config::default_config_path();
+            let config_path = &config::DEFAULT_CONFIG_PATH;
 
             if !config_path.exists() {
                 log::info!("Whimsy configuration file {} does not exist, writing a default configuration file to this location.", config_path.display());
@@ -109,9 +109,7 @@ fn main() -> Result<()> {
         None => {}
     }
 
-    let config_path = cli_options
-        .config_file
-        .unwrap_or_else(config::default_config_path);
+    let config_path = cli_options.config_file;
 
     let config = config::read_config_from_file(&config_path)?.unwrap_or_default();
     let mut kb = keybind::Keybinds::new();

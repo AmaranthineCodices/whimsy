@@ -3,6 +3,15 @@ use std::path::{Path, PathBuf};
 
 use crate::keybind;
 
+lazy_static::lazy_static! {
+    pub static ref DEFAULT_CONFIG_PATH: PathBuf = {
+        let mut cfg_dir = dirs::config_dir().expect("Could not find user configuration directory.");
+        cfg_dir.push("whimsy");
+        cfg_dir.push("whimsy.yaml");
+        cfg_dir
+    };
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum ConfigReadError {
     #[error("could not read config file: {0}")]
@@ -108,16 +117,9 @@ pub fn read_config_from_file(path: &dyn AsRef<Path>) -> Result<Option<Config>, C
     serde_yaml::from_str(&config_string).map_err(|e| ConfigReadError::DeserializeError(e))
 }
 
-pub fn default_config_path() -> PathBuf {
-    let mut cfg_dir = dirs::config_dir().expect("Could not find user configuration directory.");
-    cfg_dir.push("whimsy");
-    cfg_dir.push("whimsy.yaml");
-    cfg_dir
-}
-
 pub fn create_default_config() -> std::io::Result<()> {
     let default_config = Config::default();
-    let default_path = default_config_path();
+    let default_path: &PathBuf = &DEFAULT_CONFIG_PATH;
     // This should always succeed; the default config should always be representable.
     let config_string = serde_yaml::to_string(&default_config).unwrap();
     std::fs::create_dir_all(&default_path.parent().unwrap())?;
