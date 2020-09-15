@@ -25,3 +25,4 @@ color-eyre = "0.5"
 thiserror = "1.0"
 
 lazy_static = "1.4.0"
+dotenv = "0.15"

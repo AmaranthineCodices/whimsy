@@ -40,8 +40,9 @@ fn slice_rect(direction: config::Direction, rect: window::Rect, slice_factor: f3
 }
 
 fn main() -> Result<()> {
-    pretty_env_logger::init();
     color_eyre::install()?;
+    dotenv::dotenv()?;
+    pretty_env_logger::init();
 
     let cli_options = cli::CliOptions::from_args();
     match cli_options.command {
