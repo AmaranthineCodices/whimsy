@@ -16,29 +16,6 @@ use winapi::shared::winerror;
 use winapi::um::shellapi;
 use winapi::um::winuser;
 
-fn slice_rect(direction: config::Direction, rect: window::Rect, slice_factor: f32) -> window::Rect {
-    let (width, height) = rect.wh();
-    let width_slice = ((width as f32) / slice_factor) as i32;
-    let height_slice = ((height as f32) / slice_factor) as i32;
-
-    match direction {
-        config::Direction::Up => window::Rect::xywh(rect.left, rect.top, width, height_slice),
-        config::Direction::Left => window::Rect::xywh(rect.left, rect.top, width_slice, height),
-        config::Direction::Right => window::Rect::xywh(
-            rect.left + width - width_slice,
-            rect.top,
-            width_slice,
-            height,
-        ),
-        config::Direction::Down => window::Rect::xywh(
-            rect.left,
-            rect.top + height - height_slice,
-            width,
-            height_slice,
-        ),
-    }
-}
-
 fn main() -> Result<()> {
     color_eyre::install()?;
     dotenv::dotenv()?;
@@ -140,7 +117,7 @@ fn main() -> Result<()> {
                         if let Some(mut active_window) = window::get_focused_window() {
                             let monitor = active_window.get_monitor();
                             let monitor_work_area = monitor.get_work_area().unwrap();
-                            let pushed_rect = slice_rect(direction, monitor_work_area, fraction);
+                            let pushed_rect = monitor_work_area.slice_rect(direction, fraction); 
                             log::debug!(
                                 "Pushed active window (direction {:?}, fraction {:?}) to rect {:?}",
                                 direction,

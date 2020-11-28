@@ -1,6 +1,8 @@
 /// Rustified abstraction layer over winapi for interacting with (top-level) windows.
 use winapi::um::winuser;
 
+use crate::config::Direction;
+
 type WindowHandle = winapi::shared::windef::HWND;
 type MonitorHandle = winapi::shared::windef::HMONITOR;
 type Win32Rect = winapi::shared::windef::RECT;
@@ -52,6 +54,29 @@ impl Rect {
             (self.right - self.left).abs(),
             (self.bottom - self.top).abs(),
         )
+    }
+
+    pub fn slice_rect(&self, direction: Direction, slice_factor: f32) -> Rect {
+        let (width, height) = self.wh();
+        let width_slice = ((width as f32) / slice_factor) as i32;
+        let height_slice = ((height as f32) / slice_factor) as i32;
+
+        match direction {
+            Direction::Up => Rect::xywh(self.left, self.top, width, height_slice),
+            Direction::Left => Rect::xywh(self.left, self.top, width_slice, height),
+            Direction::Right => Rect::xywh(
+                self.left + width - width_slice,
+                self.top,
+                width_slice,
+                height,
+            ),
+            Direction::Down => Rect::xywh(
+                self.left,
+                self.top + height - height_slice,
+                width,
+                height_slice,
+            ),
+        }
     }
 
     fn from_win32_rect(rect: Win32Rect) -> Rect {
