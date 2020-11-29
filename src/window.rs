@@ -79,6 +79,16 @@ impl Rect {
         }
     }
 
+    pub fn nudge(&self, direction: Direction, amount: i32) -> Rect {
+        let (width, height) = self.wh();
+        match direction {
+            Direction::Up => Rect::xywh(self.left, self.top - amount, width, height),
+            Direction::Down => Rect::xywh(self.left, self.top + amount, width, height),
+            Direction::Left => Rect::xywh(self.left - amount, self.top, width, height),
+            Direction::Right => Rect::xywh(self.left + amount, self.top, width, height),
+        }
+    }
+
     fn from_win32_rect(rect: Win32Rect) -> Rect {
         Rect::xyxy(rect.left, rect.top, rect.right, rect.bottom)
     }

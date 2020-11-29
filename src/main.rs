@@ -146,32 +146,7 @@ fn main() -> Result<()> {
                                 },
                             } as i32;
 
-                            let nudged_rect = match direction {
-                                config::Direction::Up => window::Rect::xywh(
-                                    starting_rect.left,
-                                    starting_rect.top - absolute_distance,
-                                    width,
-                                    height,
-                                ),
-                                config::Direction::Down => window::Rect::xywh(
-                                    starting_rect.left,
-                                    starting_rect.top + absolute_distance,
-                                    width,
-                                    height,
-                                ),
-                                config::Direction::Left => window::Rect::xywh(
-                                    starting_rect.left - absolute_distance,
-                                    starting_rect.top,
-                                    width,
-                                    height,
-                                ),
-                                config::Direction::Right => window::Rect::xywh(
-                                    starting_rect.left + absolute_distance,
-                                    starting_rect.top,
-                                    width,
-                                    height,
-                                ),
-                            };
+                            let nudged_rect = starting_rect.nudge(direction, absolute_distance);
 
                             active_window.set_rect(nudged_rect).unwrap();
                             log::debug!(
